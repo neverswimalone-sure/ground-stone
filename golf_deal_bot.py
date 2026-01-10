@@ -122,14 +122,14 @@ def send_telegram_message(title, link, summary):
     매개변수: title - 뉴스 제목, link - 뉴스 링크, summary - 뉴스 요약
     반환: True (전송 성공) / False (전송 실패)
     """
-    # 텔레그램 메시지 형식 작성 (Markdown 형식)
-    message = f"""🏌️ *골프 딜 뉴스 알림*
+    # 텔레그램 메시지 형식 작성 (일반 텍스트)
+    message = f"""🏌️ 골프 딜 뉴스 알림
 
-*제목:* {title}
+제목: {title}
 
-*링크:* {link}
+링크: {link}
 
-*요약:* {summary}
+요약: {summary}
 
 ---"""
 
@@ -140,7 +140,6 @@ def send_telegram_message(title, link, summary):
     payload = {
         'chat_id': TELEGRAM_CHAT_ID,
         'text': message,
-        'parse_mode': 'Markdown',  # Markdown 형식 사용
         'disable_web_page_preview': False  # 링크 미리보기 활성화
     }
 
