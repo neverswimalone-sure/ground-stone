@@ -5,12 +5,12 @@
 작성일: 2026-01-10
 """
 
-import feedparser  # RSS 피드 파싱을 위한 라이브러리
-import requests  # HTTP 요청을 위한 라이브러리 (텔레그램 API 호출)
+import requests  # HTTP 요청을 위한 라이브러리 (텔레그램 API 호출 및 RSS 가져오기)
 import time  # 시간 관련 함수를 위한 라이브러리
 from datetime import datetime, timedelta  # 날짜/시간 계산을 위한 라이브러리
 from urllib.parse import quote  # URL 인코딩을 위한 함수
 import hashlib  # 중복 체크를 위한 해시 생성
+import xml.etree.ElementTree as ET  # XML 파싱을 위한 표준 라이브러리 (RSS 파싱용)
 
 # ==================== 설정 구간 (여기를 수정하세요!) ====================
 TELEGRAM_BOT_TOKEN = "8180938946:AAHgoRR7Tt_3J_gyENJXt32qGa0kJ5nQxGM
@@ -178,14 +178,42 @@ def fetch_google_news(keyword):
     try:
         print(f"🔍 검색 중: {keyword}")
 
-        # RSS 피드 파싱
-        feed = feedparser.parse(rss_url)
+        # RSS 피드를 HTTP GET 요청으로 가져오기
+        response = requests.get(rss_url, timeout=10)
+        response.raise_for_status()  # HTTP 에러 발생 시 예외 발생
+
+        # XML 파싱
+        root = ET.fromstring(response.content)
+
+        # 뉴스 항목 리스트 생성
+        entries = []
+
+        # RSS 2.0 형식: channel/item 태그에서 뉴스 추출
+        for item in root.findall('.//item'):
+            # 제목 추출
+            title_elem = item.find('title')
+            title = title_elem.text if title_elem is not None else '제목 없음'
+
+            # 링크 추출
+            link_elem = item.find('link')
+            link = link_elem.text if link_elem is not None else ''
+
+            # 요약(설명) 추출
+            desc_elem = item.find('description')
+            summary = desc_elem.text if desc_elem is not None else '요약 없음'
+
+            # 딕셔너리 형태로 저장 (feedparser와 동일한 구조)
+            entries.append({
+                'title': title,
+                'link': link,
+                'summary': summary
+            })
 
         # 가져온 뉴스 개수 출력
-        print(f"   └─ {len(feed.entries)}개 뉴스 발견")
+        print(f"   └─ {len(entries)}개 뉴스 발견")
 
         # 뉴스 항목 반환
-        return feed.entries
+        return entries
 
     except Exception as e:
         # 에러 발생 시 빈 리스트 반환하고 다음으로 넘어감

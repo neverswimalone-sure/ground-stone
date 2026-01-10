@@ -1,7 +1,6 @@
 # 골프 딜 뉴스 텔레그램 봇 필수 라이브러리
 
-# RSS 피드 파싱 라이브러리
-feedparser>=6.0.10
-
-# HTTP 요청 라이브러리 (텔레그램 API 호출용)
+# HTTP 요청 라이브러리 (텔레그램 API 호출 및 RSS 가져오기)
 requests>=2.31.0
+
+# 참고: xml.etree.ElementTree는 Python 표준 라이브러리로 별도 설치 불필요
