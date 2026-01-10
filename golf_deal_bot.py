@@ -13,8 +13,8 @@ import hashlib  # 중복 체크를 위한 해시 생성
 import xml.etree.ElementTree as ET  # XML 파싱을 위한 표준 라이브러리 (RSS 파싱용)
 
 # ==================== 설정 구간 (여기를 수정하세요!) ====================
-TELEGRAM_BOT_TOKEN = "8180938946:AAHgoRR7Tt_3J_gyENJXt32qGa0kJ5nQxGM"
-TELEGRAM_CHAT_ID = "143110040"
+TELEGRAM_BOT_TOKEN = "8180938946:AAHgoRR7Tt_3J_gyENJXt32qGa0kJ5nQxGM"  # 여기에 텔레그램 봇 토큰을 입력하세요 (예: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz")
+TELEGRAM_CHAT_ID = "143110040"    # 여기에 텔레그램 채팅 ID를 입력하세요 (예: "123456789")
 # ========================================================================
 
 # 중복 전송 방지를 위한 파일명
