@@ -4,7 +4,7 @@
 
 import requests
 import logging
-from typing import Optional
+from typing import Optional, Any, List
 from datetime import datetime
 
 from .config import config

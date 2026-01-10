@@ -4,7 +4,7 @@
 
 import json
 import logging
-from typing import Set, List
+from typing import Set, List, Any
 from pathlib import Path
 from datetime import datetime
 
