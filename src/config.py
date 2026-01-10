@@ -18,7 +18,7 @@ class Config:
     ROOT_DIR = Path(__file__).parent.parent
 
     # 엑셀 파일 경로
-    EXCEL_FILE_PATH = ROOT_DIR / "gieobgaehwang_20260110.xlsx"
+    EXCEL_FILE_PATH = ROOT_DIR / "기업개황_20260110.xlsx"
 
     # 상태 저장 파일 경로
     STATE_FILE_PATH = ROOT_DIR / "state.json"

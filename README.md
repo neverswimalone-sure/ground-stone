@@ -14,7 +14,7 @@
 
 ```
 ground-stone/
-├── gieobgaehwang_20260110.xlsx    # 골프장 회사 목록
+├── 기업개황_20260110.xlsx    # 골프장 회사 목록
 ├── .env                            # 환경 변수 (git ignore)
 ├── .env.example                    # 환경 변수 템플릿
 ├── requirements.txt                # Python 의존성
@@ -77,7 +77,7 @@ TELEGRAM_CHAT_ID=987654321
 
 ### 5. 엑셀 파일 준비
 
-프로젝트 루트에 `gieobgaehwang_20260110.xlsx` 파일을 배치하세요.
+프로젝트 루트에 `기업개황_20260110.xlsx` 파일을 배치하세요.
 
 ## 사용 방법
 
@@ -175,7 +175,7 @@ cat dart_monitoring.log
 
 ### 엑셀 파일을 찾을 수 없습니다
 
-- `gieobgaehwang_20260110.xlsx` 파일이 프로젝트 루트에 있는지 확인
+- `기업개황_20260110.xlsx` 파일이 프로젝트 루트에 있는지 확인
 - 파일명이 정확히 일치하는지 확인
 
 ### DART API 호출 실패
