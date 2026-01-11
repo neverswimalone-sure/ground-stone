@@ -79,29 +79,58 @@ python golf_deal_bot.py
 
 ## 🔄 자동 실행 (선택사항)
 
-### Windows (작업 스케줄러)
-1. 작업 스케줄러 실행
+### Windows (작업 스케줄러) - 자동 설정 ⭐ 추천
+
+**평일 오전 9시~오후 6시, 30분마다 자동 실행**
+
+1. **PowerShell을 관리자 권한으로 실행**
+   - 시작 메뉴에서 "PowerShell" 검색
+   - 우클릭 → "관리자 권한으로 실행"
+
+2. **저장소 폴더로 이동**
+   ```powershell
+   cd C:\경로\ground-stone
+   ```
+
+3. **설정 스크립트 실행**
+   ```powershell
+   .\setup_scheduler.ps1
+   ```
+
+4. **완료!** 이제 평일 9시~18시, 30분마다 자동으로 뉴스를 수집합니다.
+
+**확인 방법:**
+- `Win + R` → `taskschd.msc` 입력 → 작업 스케줄러에서 "GolfDealNewsBot" 확인
+
+### Windows (작업 스케줄러) - 수동 설정
+
+1. 작업 스케줄러 실행 (`Win + R` → `taskschd.msc`)
 2. "기본 작업 만들기" 선택
-3. 트리거: 매일 오전 9시
-4. 작업: `python C:\경로\golf_deal_bot.py`
+3. 트리거: 매일 오전 9시, 30분마다 반복
+4. 작업: `C:\경로\ground-stone\run_golf_bot.bat`
 
 ### Linux/Mac (cron)
 ```bash
 # crontab 편집
 crontab -e
 
-# 매일 오전 9시 실행
-0 9 * * * /usr/bin/python3 /경로/golf_deal_bot.py
+# 평일 9-18시, 30분마다 실행
+0,30 9-17 * * 1-5 /usr/bin/python3 /경로/golf_deal_bot.py
+0 18 * * 1-5 /usr/bin/python3 /경로/golf_deal_bot.py
 ```
 
 ## 📁 파일 구조
 
 ```
 ground-stone/
-├── golf_deal_bot.py    # 메인 봇 코드
-├── requirements.txt     # 필수 라이브러리 목록
-├── sent_news.txt        # 전송된 뉴스 기록 (자동 생성)
-└── README.md           # 이 문서
+├── golf_deal_bot.py              # 메인 봇 코드
+├── requirements.txt               # 필수 라이브러리 목록
+├── run_golf_bot.bat              # Windows 실행 배치 파일
+├── setup_scheduler.ps1           # Windows 작업 스케줄러 자동 설정 스크립트
+├── GolfDealBot_TaskScheduler.xml # 작업 스케줄러 XML (참고용)
+├── sent_news.txt                 # 전송된 뉴스 기록 (자동 생성)
+├── bot_execution_log.txt         # 실행 로그 (자동 생성)
+└── README.md                     # 이 문서
 ```
 
 ## 🛠️ 커스터마이징
