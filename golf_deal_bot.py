@@ -7,10 +7,11 @@
 
 import requests  # HTTP 요청을 위한 라이브러리 (텔레그램 API 호출 및 RSS 가져오기)
 import time  # 시간 관련 함수를 위한 라이브러리
-from datetime import datetime, timedelta  # 날짜/시간 계산을 위한 라이브러리
+from datetime import datetime, timedelta, timezone  # 날짜/시간 계산을 위한 라이브러리
 from urllib.parse import quote  # URL 인코딩을 위한 함수
 import hashlib  # 중복 체크를 위한 해시 생성
 import xml.etree.ElementTree as ET  # XML 파싱을 위한 표준 라이브러리 (RSS 파싱용)
+from email.utils import parsedate_to_datetime  # RFC 2822 날짜 파싱용
 
 # ==================== 설정 구간 (여기를 수정하세요!) ====================
 TELEGRAM_BOT_TOKEN = "8180938946:AAHgoRR7Tt_3J_gyENJXt32qGa0kJ5nQxGM"  # 여기에 텔레그램 봇 토큰을 입력하세요 (예: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz")
@@ -116,22 +117,16 @@ def is_relevant_news(title, summary):
     return False
 
 
-def send_telegram_message(title, link, summary):
+def send_telegram_message(title, link):
     """
     텔레그램으로 뉴스를 전송하는 함수
-    매개변수: title - 뉴스 제목, link - 뉴스 링크, summary - 뉴스 요약
+    매개변수: title - 뉴스 제목, link - 뉴스 링크
     반환: True (전송 성공) / False (전송 실패)
     """
-    # 텔레그램 메시지 형식 작성 (일반 텍스트)
-    message = f"""🏌️ 골프 딜 뉴스 알림
+    # 텔레그램 메시지 형식 작성 (간결한 포맷: 제목 + 링크)
+    message = f"""🏌️ {title}
 
-제목: {title}
-
-링크: {link}
-
-요약: {summary}
-
----"""
+{link}"""
 
     # 텔레그램 API URL
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -163,7 +158,7 @@ def send_telegram_message(title, link, summary):
 
 def fetch_google_news(keyword):
     """
-    구글 뉴스 RSS에서 특정 키워드로 뉴스를 가져오는 함수
+    구글 뉴스 RSS에서 특정 키워드로 뉴스를 가져오는 함수 (최근 24시간 이내만)
     매개변수: keyword - 검색할 키워드
     반환: 뉴스 항목 리스트
     """
@@ -183,6 +178,11 @@ def fetch_google_news(keyword):
         # XML 파싱
         root = ET.fromstring(response.content)
 
+        # 현재 시간 (UTC 기준)
+        now = datetime.now(timezone.utc)
+        # 24시간 전 시간
+        one_day_ago = now - timedelta(days=1)
+
         # 뉴스 항목 리스트 생성
         entries = []
 
@@ -200,7 +200,21 @@ def fetch_google_news(keyword):
             desc_elem = item.find('description')
             summary = desc_elem.text if desc_elem is not None else '요약 없음'
 
-            # 딕셔너리 형태로 저장 (feedparser와 동일한 구조)
+            # 발행일 추출
+            pub_date_elem = item.find('pubDate')
+            if pub_date_elem is not None and pub_date_elem.text:
+                try:
+                    # RFC 2822 형식의 날짜를 datetime으로 변환
+                    pub_date = parsedate_to_datetime(pub_date_elem.text)
+
+                    # 24시간 이내의 기사만 포함
+                    if pub_date < one_day_ago:
+                        continue  # 24시간 이전 기사는 건너뛰기
+                except Exception:
+                    # 날짜 파싱 실패 시 일단 포함
+                    pass
+
+            # 딕셔너리 형태로 저장
             entries.append({
                 'title': title,
                 'link': link,
@@ -208,7 +222,7 @@ def fetch_google_news(keyword):
             })
 
         # 가져온 뉴스 개수 출력
-        print(f"   └─ {len(entries)}개 뉴스 발견")
+        print(f"   └─ {len(entries)}개 뉴스 발견 (최근 24시간 이내)")
 
         # 뉴스 항목 반환
         return entries
@@ -295,7 +309,7 @@ def main():
 
         for news in all_news:
             # 텔레그램으로 전송
-            if send_telegram_message(news['title'], news['link'], news['summary']):
+            if send_telegram_message(news['title'], news['link']):
                 # 전송 성공 시 파일에 저장
                 save_sent_news(news['hash'])
                 success_count += 1
