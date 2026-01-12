@@ -42,11 +42,13 @@ ENGLISH_KEYWORDS = [
 
 # 진성 뉴스를 구분하기 위한 필수 키워드 (이 중 하나라도 포함되어야 함)
 FILTER_KEYWORDS = [
-    # 한국어
+    # 한국어 - 투자/M&A 관련
     "인수", "매각", "투자", "딜", "사모펀드", "PEF", "M&A", "IPO", "상장",
+    # 한국어 - 개발/경영 관련
+    "개발", "완성", "오픈", "개장", "분양", "회원권", "재정비", "리모델링", "조성",
     # 영어
     "acquisition", "deal", "capital", "investment", "private equity",
-    "merger", "IPO", "buyout", "acquire", "purchase"
+    "merger", "IPO", "buyout", "acquire", "purchase", "development", "opening"
 ]
 
 # 제외할 노이즈 키워드 (이것이 포함되면 제외)
