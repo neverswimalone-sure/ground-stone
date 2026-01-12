@@ -182,8 +182,8 @@ def fetch_google_news(keyword):
 
         # 현재 시간 (UTC 기준)
         now = datetime.now(timezone.utc)
-        # 24시간 전 시간
-        one_day_ago = now - timedelta(days=1)
+        # 48시간 전 시간 (24시간에서 48시간으로 완화)
+        one_day_ago = now - timedelta(days=2)
 
         # 뉴스 항목 리스트 생성
         entries = []
@@ -224,7 +224,7 @@ def fetch_google_news(keyword):
             })
 
         # 가져온 뉴스 개수 출력
-        print(f"   └─ {len(entries)}개 뉴스 발견 (최근 24시간 이내)")
+        print(f"   └─ {len(entries)}개 뉴스 발견 (최근 48시간 이내)")
 
         # 뉴스 항목 반환
         return entries
@@ -260,9 +260,14 @@ def main():
     all_news = []
 
     # 각 키워드로 뉴스 수집
+    total_fetched = 0
+    total_duplicates = 0
+    total_filtered = 0
+
     for keyword in all_keywords:
         # 구글 뉴스에서 해당 키워드로 검색
         entries = fetch_google_news(keyword)
+        total_fetched += len(entries)
 
         # 각 뉴스 항목 처리
         for entry in entries:
@@ -277,10 +282,13 @@ def main():
 
                 # 이미 전송한 뉴스면 건너뛰기
                 if news_hash in sent_news:
+                    total_duplicates += 1
                     continue
 
                 # 관련 뉴스인지 필터링
                 if not is_relevant_news(title, summary):
+                    total_filtered += 1
+                    print(f"   ⊗ 필터링됨: {title[:50]}...")
                     continue
 
                 # 조건을 통과한 뉴스 저장
@@ -290,6 +298,7 @@ def main():
                     'summary': summary,
                     'hash': news_hash
                 })
+                print(f"   ✓ 선택됨: {title[:50]}...")
 
             except Exception as e:
                 # 개별 뉴스 처리 중 에러 발생 시
@@ -300,7 +309,11 @@ def main():
         # API 부하 방지를 위한 짧은 대기 (1초)
         time.sleep(1)
 
-    print(f"\n📊 필터링 결과: 총 {len(all_news)}개의 새로운 딜 뉴스 발견\n")
+    print(f"\n📊 필터링 결과:")
+    print(f"   - 총 수집: {total_fetched}개")
+    print(f"   - 중복 제외: {total_duplicates}개")
+    print(f"   - 필터링됨: {total_filtered}개")
+    print(f"   - 최종 선택: {len(all_news)}개\n")
 
     # 전송 카운터
     success_count = 0
