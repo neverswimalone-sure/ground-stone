@@ -5,7 +5,9 @@ from typing import List, Dict, Optional
 import requests
 import zipfile
 import io
+import csv
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from config.settings import DART_API_KEY, DART_BASE_URL, INDUSTRY_CODE
 
 logger = logging.getLogger(__name__)
@@ -69,10 +71,47 @@ class DARTClient:
             logger.error(f"Failed to fetch disclosures: {e}")
             return {"status": "error", "list": []}
 
+    def load_golf_companies_from_csv(self) -> Dict[str, Dict]:
+        """
+        Load golf course companies from CSV file.
+
+        Returns:
+            Dictionary mapping company name to info
+        """
+        csv_path = Path(__file__).parent.parent.parent / "data" / "golf_companies.csv"
+
+        if not csv_path.exists():
+            logger.error(f"CSV file not found: {csv_path}")
+            return {}
+
+        golf_companies_csv = {}
+
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    company_name = row.get('공시회사명', '').strip()
+                    business_no = row.get('사업자등록번호', '').strip()
+                    full_name = row.get('회사이름', '').strip()
+
+                    if company_name:
+                        golf_companies_csv[company_name] = {
+                            "공시회사명": company_name,
+                            "사업자등록번호": business_no,
+                            "회사이름": full_name
+                        }
+
+            logger.info(f"Loaded {len(golf_companies_csv)} golf companies from CSV")
+            return golf_companies_csv
+
+        except Exception as e:
+            logger.error(f"Failed to load CSV file: {e}")
+            return {}
+
     def get_golf_companies(self) -> Dict[str, Dict]:
         """
         Get list of golf course operation companies from DART.
-        Downloads corpCode.xml and filters by industry.
+        Matches companies from CSV file with DART data.
 
         Returns:
             Dictionary mapping corp_code to company info
@@ -80,6 +119,13 @@ class DARTClient:
         if self.golf_companies:
             # Return cached result
             return self.golf_companies
+
+        # Load golf companies from CSV
+        golf_companies_csv = self.load_golf_companies_from_csv()
+
+        if not golf_companies_csv:
+            logger.error("No golf companies loaded from CSV!")
+            return {}
 
         logger.info("Downloading company list from DART...")
 
@@ -99,52 +145,41 @@ class DARTClient:
 
             golf_companies = {}
             total_companies = 0
+            matched_count = 0
 
-            # Find companies with golf course industry
-            # First, check structure of first few companies
-            sample_companies = list(root.findall('.//list'))[:3]
-            logger.info("Sample XML structure:")
-            for i, comp in enumerate(sample_companies, 1):
-                logger.info(f"  Company {i} tags: {[elem.tag for elem in comp]}")
-                if comp.find('corp_name') is not None:
-                    logger.info(f"    corp_name: {comp.find('corp_name').text}")
-                for elem in comp:
-                    if elem.text and len(elem.text) < 100:  # Only log short values
-                        logger.info(f"    {elem.tag}: {elem.text}")
-
+            # Match DART companies with CSV list
             for company in root.findall('.//list'):
                 total_companies += 1
                 corp_name = company.find('corp_name')
                 corp_code = company.find('corp_code')
                 stock_code = company.find('stock_code')
 
-                # DART XML doesn't have induty_code field - we need to use company info API instead
-                # For now, we'll collect ALL companies and check later
-                # This is a workaround - proper solution would be to query company info API for each
-
                 if corp_name is not None and corp_code is not None:
-                    # Check company name for golf-related keywords as fallback
                     corp_name_text = corp_name.text or ""
 
-                    # Look for golf course related keywords in company name
-                    if ("골프" in corp_name_text or
-                        "컨트리" in corp_name_text or
-                        "golf" in corp_name_text.lower() or
-                        "country" in corp_name_text.lower() or
-                        "cc" in corp_name_text.lower()):
+                    # Check if this company is in our CSV list
+                    if corp_name_text in golf_companies_csv:
+                        csv_info = golf_companies_csv[corp_name_text]
 
                         golf_companies[corp_code.text] = {
                             "corp_name": corp_name_text,
                             "corp_code": corp_code.text,
                             "stock_code": stock_code.text if stock_code is not None and stock_code.text else "",
-                            "induty_code": "골프 관련 (이름 기반)"
+                            "사업자등록번호": csv_info.get("사업자등록번호", ""),
+                            "회사이름": csv_info.get("회사이름", ""),
+                            "induty_code": "골프장 운영업"
                         }
 
-                        if total_companies <= 5:  # Log first 5 matches
-                            logger.info(f"    Found potential golf company: {corp_name_text}")
+                        matched_count += 1
 
-            logger.info(f"Found {len(golf_companies)} golf course companies out of {total_companies} total")
-            logger.info(f"Golf companies: {list(golf_companies.values())[:5]}")  # Log first 5
+                        if matched_count <= 10:  # Log first 10 matches
+                            logger.info(f"  Matched: {corp_name_text} (사업자번호: {csv_info.get('사업자등록번호')})")
+
+            logger.info(f"Matched {matched_count} golf companies from CSV with DART (out of {len(golf_companies_csv)} in CSV)")
+
+            if matched_count < len(golf_companies_csv):
+                unmatched = set(golf_companies_csv.keys()) - set([c['corp_name'] for c in golf_companies.values()])
+                logger.warning(f"Unmatched companies ({len(unmatched)}): {list(unmatched)[:10]}")
 
             self.golf_companies = golf_companies
             return golf_companies
