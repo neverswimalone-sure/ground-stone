@@ -101,28 +101,47 @@ class DARTClient:
             total_companies = 0
 
             # Find companies with golf course industry
+            # First, check structure of first few companies
+            sample_companies = list(root.findall('.//list'))[:3]
+            logger.info("Sample XML structure:")
+            for i, comp in enumerate(sample_companies, 1):
+                logger.info(f"  Company {i} tags: {[elem.tag for elem in comp]}")
+                if comp.find('corp_name') is not None:
+                    logger.info(f"    corp_name: {comp.find('corp_name').text}")
+                for elem in comp:
+                    if elem.text and len(elem.text) < 100:  # Only log short values
+                        logger.info(f"    {elem.tag}: {elem.text}")
+
             for company in root.findall('.//list'):
                 total_companies += 1
                 corp_name = company.find('corp_name')
                 corp_code = company.find('corp_code')
                 stock_code = company.find('stock_code')
-                induty_code = company.find('induty_code')  # Note: DART uses 'induty' not 'industry'
 
-                if all([corp_name is not None, corp_code is not None, induty_code is not None]):
-                    # Check if industry code contains golf course operation
-                    # DART uses multiple formats: "91221", "골프장 운영업", etc.
-                    induty_text = induty_code.text or ""
+                # DART XML doesn't have induty_code field - we need to use company info API instead
+                # For now, we'll collect ALL companies and check later
+                # This is a workaround - proper solution would be to query company info API for each
 
-                    if ("91221" in induty_text or
-                        "골프" in induty_text or
-                        "golf" in induty_text.lower()):
+                if corp_name is not None and corp_code is not None:
+                    # Check company name for golf-related keywords as fallback
+                    corp_name_text = corp_name.text or ""
+
+                    # Look for golf course related keywords in company name
+                    if ("골프" in corp_name_text or
+                        "컨트리" in corp_name_text or
+                        "golf" in corp_name_text.lower() or
+                        "country" in corp_name_text.lower() or
+                        "cc" in corp_name_text.lower()):
 
                         golf_companies[corp_code.text] = {
-                            "corp_name": corp_name.text,
+                            "corp_name": corp_name_text,
                             "corp_code": corp_code.text,
-                            "stock_code": stock_code.text if stock_code is not None else "",
-                            "induty_code": induty_text
+                            "stock_code": stock_code.text if stock_code is not None and stock_code.text else "",
+                            "induty_code": "골프 관련 (이름 기반)"
                         }
+
+                        if total_companies <= 5:  # Log first 5 matches
+                            logger.info(f"    Found potential golf company: {corp_name_text}")
 
             logger.info(f"Found {len(golf_companies)} golf course companies out of {total_companies} total")
             logger.info(f"Golf companies: {list(golf_companies.values())[:5]}")  # Log first 5
