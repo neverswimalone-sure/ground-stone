@@ -108,10 +108,25 @@ class DARTClient:
             logger.error(f"Failed to load CSV file: {e}")
             return {}
 
+    def _normalize_company_name(self, name: str) -> str:
+        """
+        Normalize company name for matching by removing common prefixes/suffixes.
+
+        Args:
+            name: Company name to normalize
+
+        Returns:
+            Normalized company name
+        """
+        import re
+        # Remove common company suffixes and prefixes
+        name = re.sub(r'\(주\)|주식회사|\(유\)|유한회사|\s+', '', name)
+        return name.strip()
+
     def get_golf_companies(self) -> Dict[str, Dict]:
         """
         Get list of golf course operation companies from DART.
-        Matches companies from CSV file with DART data.
+        Matches companies from CSV file with DART data using normalized names.
 
         Returns:
             Dictionary mapping corp_code to company info
@@ -127,6 +142,16 @@ class DARTClient:
             logger.error("No golf companies loaded from CSV!")
             return {}
 
+        # Create normalized name mapping for CSV companies
+        normalized_csv_map = {}
+        for csv_name, csv_info in golf_companies_csv.items():
+            normalized_name = self._normalize_company_name(csv_name)
+            normalized_csv_map[normalized_name] = {
+                "original_name": csv_name,
+                "info": csv_info
+            }
+
+        logger.info(f"Loaded {len(golf_companies_csv)} companies from CSV")
         logger.info("Downloading company list from DART...")
 
         url = f"{self.base_url}/corpCode.xml"
@@ -147,7 +172,7 @@ class DARTClient:
             total_companies = 0
             matched_count = 0
 
-            # Match DART companies with CSV list
+            # Match DART companies with CSV list using normalized names
             for company in root.findall('.//list'):
                 total_companies += 1
                 corp_name = company.find('corp_name')
@@ -156,10 +181,13 @@ class DARTClient:
 
                 if corp_name is not None and corp_code is not None:
                     corp_name_text = corp_name.text or ""
+                    normalized_dart_name = self._normalize_company_name(corp_name_text)
 
-                    # Check if this company is in our CSV list
-                    if corp_name_text in golf_companies_csv:
-                        csv_info = golf_companies_csv[corp_name_text]
+                    # Check if this company is in our CSV list (using normalized names)
+                    if normalized_dart_name in normalized_csv_map:
+                        csv_data = normalized_csv_map[normalized_dart_name]
+                        csv_info = csv_data["info"]
+                        csv_original_name = csv_data["original_name"]
 
                         golf_companies[corp_code.text] = {
                             "corp_name": corp_name_text,
@@ -167,19 +195,35 @@ class DARTClient:
                             "stock_code": stock_code.text if stock_code is not None and stock_code.text else "",
                             "사업자등록번호": csv_info.get("사업자등록번호", ""),
                             "회사이름": csv_info.get("회사이름", ""),
+                            "공시회사명": csv_original_name,
                             "induty_code": "골프장 운영업"
                         }
 
                         matched_count += 1
 
                         if matched_count <= 10:  # Log first 10 matches
-                            logger.info(f"  Matched: {corp_name_text} (사업자번호: {csv_info.get('사업자등록번호')})")
+                            logger.info(f"  Matched: {corp_name_text} ← CSV: {csv_original_name} (사업자번호: {csv_info.get('사업자등록번호')})")
 
-            logger.info(f"Matched {matched_count} golf companies from CSV with DART (out of {len(golf_companies_csv)} in CSV)")
+            logger.info(f"Found {matched_count} golf course companies out of {total_companies} total")
+            logger.info(f"Golf companies: {list(golf_companies.keys())[:10]}")
+
+            if matched_count == 0:
+                logger.warning("⚠️ NO golf companies matched! Showing first 10 CSV names and first 10 DART names for debugging:")
+                logger.warning(f"CSV (normalized): {list(normalized_csv_map.keys())[:10]}")
+
+                # Show first 10 DART companies for debugging
+                dart_samples = []
+                for i, company in enumerate(root.findall('.//list')[:10]):
+                    corp_name = company.find('corp_name')
+                    if corp_name is not None and corp_name.text:
+                        normalized = self._normalize_company_name(corp_name.text)
+                        dart_samples.append(f"{corp_name.text} → {normalized}")
+                logger.warning(f"DART samples: {dart_samples}")
 
             if matched_count < len(golf_companies_csv):
-                unmatched = set(golf_companies_csv.keys()) - set([c['corp_name'] for c in golf_companies.values()])
-                logger.warning(f"Unmatched companies ({len(unmatched)}): {list(unmatched)[:10]}")
+                matched_csv_names = set([g['공시회사명'] for g in golf_companies.values()])
+                unmatched = set(golf_companies_csv.keys()) - matched_csv_names
+                logger.warning(f"Unmatched companies ({len(unmatched)}): {list(unmatched)[:20]}")
 
             self.golf_companies = golf_companies
             return golf_companies
