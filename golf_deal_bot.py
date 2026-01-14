@@ -22,7 +22,7 @@ from email.utils import parsedate_to_datetime  # RFC 2822 날짜 파싱용
 import re  # 정규표현식을 위한 라이브러리 (제목 정규화용)
 
 # ==================== 설정 구간 (여기를 수정하세요!) ====================
-TELEGRAM_BOT_TOKEN = "8180938946:AAGoZAceXOEVVKqiq8wbBC-04TsP2ygPlSU"  # 여기에 텔레그램 봇 토큰을 입력하세요 (예: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz")
+TELEGRAM_BOT_TOKEN = "8180938946:AAH3gZS6uNTsFAUwdJh2rvgMC4_QmYUAZkw"  # 여기에 텔레그램 봇 토큰을 입력하세요 (예: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz")
 TELEGRAM_CHAT_ID = "143110040"    # 여기에 텔레그램 채팅 ID를 입력하세요 (예: "123456789")
 # ========================================================================
 
