@@ -65,31 +65,53 @@ async def test_2025_audit_reports():
         logger.info(f"✅ Found {len(golf_companies)} golf course companies")
         logger.info(f"Sample companies: {list(golf_companies.values())[:3]}")
 
-        # Fetch 2025 disclosures
+        # Fetch 2025 disclosures by querying each company individually
+        # This bypasses DART API's 3-month limitation (only applies when corp_code is not specified)
         logger.info("\n" + "=" * 80)
-        logger.info("Fetching ALL disclosures from 2025-01-01 to 2025-12-31")
-        logger.info("This may take a while...")
+        logger.info("Fetching disclosures from 2025-01-01 to 2025-12-31")
+        logger.info(f"Querying {len(golf_companies)} companies individually...")
+        logger.info("This may take 10-20 minutes...")
         logger.info("=" * 80 + "\n")
 
         start_date = "20250101"
         end_date = "20251231"
 
-        result = dart_client.get_disclosure_list(start_date, end_date, page_count=100)
-        all_disclosures = result.get("list", [])
-
-        logger.info(f"✅ Fetched {len(all_disclosures)} total disclosures from 2025")
-
-        # Filter for audit reports
-        audit_reports = dart_client.filter_audit_reports(all_disclosures)
-        logger.info(f"✅ Found {len(audit_reports)} audit reports (all companies)")
-
-        # Filter for golf course companies only
         golf_audit_reports = []
-        for report in audit_reports:
-            corp_code = report.get("corp_code")
-            if corp_code in golf_companies:
-                report["induty_code"] = golf_companies[corp_code].get("induty_code", "")
+        total_disclosures = 0
+        processed_count = 0
+
+        for corp_code, company_info in golf_companies.items():
+            processed_count += 1
+            corp_name = company_info.get("corp_name", "Unknown")
+
+            # Log progress every 50 companies
+            if processed_count % 50 == 0:
+                logger.info(f"Progress: {processed_count}/{len(golf_companies)} companies processed...")
+                logger.info(f"  Found {len(golf_audit_reports)} audit reports so far")
+
+            # Query DART for this specific company
+            result = dart_client.get_disclosure_list(
+                start_date,
+                end_date,
+                corp_code=corp_code,  # Specify corp_code to bypass 3-month limit
+                page_count=100
+            )
+
+            disclosures = result.get("list", [])
+            total_disclosures += len(disclosures)
+
+            # Filter for audit reports only
+            audit_reports = dart_client.filter_audit_reports(disclosures)
+
+            # Add company info and add to results
+            for report in audit_reports:
+                report["induty_code"] = company_info.get("induty_code", "골프장 운영업")
                 golf_audit_reports.append(report)
+                logger.debug(f"  Found audit report: {corp_name} - {report.get('report_nm')}")
+
+        logger.info(f"\n✅ Processed {len(golf_companies)} companies")
+        logger.info(f"✅ Fetched {total_disclosures} total disclosures from 2025")
+        logger.info(f"✅ Found {len(golf_audit_reports)} audit reports from golf course companies")
 
         logger.info(f"\n🎯 Found {len(golf_audit_reports)} golf course audit reports!")
         logger.info(f"Expected: 400-470 reports")
