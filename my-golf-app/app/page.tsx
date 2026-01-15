@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { calculateTax } from './lib/taxCalculations';
 
-// Phase 1: UI 프레임만 구성 (계산 로직은 Phase 2에서)
+// Phase 2: 계산 로직 연결
 export default function Home() {
   const [formData, setFormData] = useState({
     총급여: 50000000,
@@ -19,16 +20,17 @@ export default function Home() {
     기타특별소득공제: 0,
   });
 
-  const [showResult, setShowResult] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
   const handleCalculate = () => {
-    // Phase 2에서 계산 로직 연결
-    setShowResult(true);
+    // Phase 2: 실제 계산 수행
+    const calculatedResult = calculateTax(formData);
+    setResult(calculatedResult);
   };
 
   const updateField = (field: string, value: number | boolean) => {
     setFormData({ ...formData, [field]: value });
-    setShowResult(false);
+    setResult(null);
   };
 
   const formatNumber = (value: number) => {
@@ -160,53 +162,53 @@ export default function Home() {
               📊 계산 결과
             </h2>
 
-            {!showResult ? (
+            {!result ? (
               <div className="text-center text-gray-500 py-20">
                 왼쪽 정보를 입력하고 '계산하기' 버튼을 눌러주세요.
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Phase 2에서 실제 계산 결과 표시 */}
+                {/* Phase 2: 실제 계산 결과 표시 */}
                 <ResultSection title="소득">
-                  <ResultRow label="총급여" value={formatNumber(formData.총급여)} />
+                  <ResultRow label="총급여" value={formatNumber(result.총급여)} />
                   <ResultRow
                     label="근로소득공제"
-                    value="-원"
+                    value={`-${formatNumber(result.근로소득공제)}`}
                     className="text-blue-600"
                   />
-                  <ResultRow label="근로소득금액" value="-원" bold />
+                  <ResultRow label="근로소득금액" value={formatNumber(result.근로소득금액)} bold />
                 </ResultSection>
 
                 <ResultSection title="소득공제">
-                  <ResultRow label="기본공제" value="-원" />
-                  <ResultRow label="추가공제" value="-원" />
-                  <ResultRow label="국민연금 등" value="-원" />
-                  <ResultRow label="의료비공제" value="-원" />
-                  <ResultRow label="기타공제" value="-원" />
+                  <ResultRow label="기본공제" value={formatNumber(result.기본공제)} />
+                  <ResultRow label="추가공제" value={formatNumber(result.추가공제)} />
+                  <ResultRow label="국민연금 등" value={formatNumber(result.국민연금등)} />
+                  <ResultRow label="의료비공제" value={formatNumber(result.의료비공제)} />
+                  <ResultRow label="기타공제" value={formatNumber(result.기타공제)} />
                   <ResultRow
                     label="소득공제 합계"
-                    value="-원"
+                    value={`-${formatNumber(result.소득공제합계)}`}
                     bold
                     className="text-blue-600"
                   />
                 </ResultSection>
 
                 <ResultSection title="과세표준 및 산출세액">
-                  <ResultRow label="과세표준" value="-원" bold />
+                  <ResultRow label="과세표준" value={formatNumber(result.과세표준)} bold />
                   <ResultRow
                     label="산출세액"
-                    value="-원"
+                    value={formatNumber(result.산출세액)}
                     bold
                     className="text-red-600"
                   />
                 </ResultSection>
 
                 <ResultSection title="세액공제">
-                  <ResultRow label="자녀세액공제" value="-원" />
-                  <ResultRow label="근로소득세액공제" value="-원" />
+                  <ResultRow label="자녀세액공제" value={formatNumber(result.자녀세액공제)} />
+                  <ResultRow label="근로소득세액공제" value={formatNumber(result.근로소득세액공제)} />
                   <ResultRow
                     label="세액공제 합계"
-                    value="-원"
+                    value={`-${formatNumber(result.세액공제합계)}`}
                     bold
                     className="text-green-600"
                   />
@@ -214,7 +216,8 @@ export default function Home() {
 
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-lg shadow-md">
                   <div className="text-sm opacity-90 mb-1">최종 결정세액</div>
-                  <div className="text-3xl font-bold">계산 중...</div>
+                  <div className="text-3xl font-bold">{formatNumber(result.결정세액)}</div>
+                  <div className="text-xs opacity-75 mt-2">※ 세액공제는 Phase 3에서 적용</div>
                 </div>
               </div>
             )}
