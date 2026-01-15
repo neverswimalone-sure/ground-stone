@@ -1,9 +1,10 @@
 """Telegram notification formatting and sending."""
 import logging
+import asyncio
 from typing import Dict
 from datetime import datetime
 from telegram import Bot
-from telegram.error import TelegramError
+from telegram.error import TelegramError, RetryAfter
 from config.settings import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID
 
 logger = logging.getLogger(__name__)
@@ -59,32 +60,49 @@ class NotificationService:
 """
         return message
 
-    async def send_notification(self, report: Dict) -> bool:
+    async def send_notification(self, report: Dict, max_retries: int = 3) -> bool:
         """
         Send notification about audit report to Telegram channel.
+        Automatically retries on rate limit errors (429).
 
         Args:
             report: Dictionary containing report information
+            max_retries: Maximum number of retry attempts
 
         Returns:
             True if successful, False otherwise
         """
-        try:
-            message = self.format_audit_report_message(report)
+        message = self.format_audit_report_message(report)
 
-            await self.bot.send_message(
-                chat_id=self.channel_id,
-                text=message,
-                parse_mode="Markdown",
-                disable_web_page_preview=False
-            )
+        for attempt in range(max_retries):
+            try:
+                await self.bot.send_message(
+                    chat_id=self.channel_id,
+                    text=message,
+                    parse_mode="Markdown",
+                    disable_web_page_preview=False
+                )
 
-            logger.info(f"Sent notification for {report.get('corp_name')}")
-            return True
+                logger.info(f"Sent notification for {report.get('corp_name')}")
+                return True
 
-        except TelegramError as e:
-            logger.error(f"Failed to send Telegram notification: {e}")
-            return False
+            except RetryAfter as e:
+                # Telegram flood control - wait and retry
+                wait_time = e.retry_after + 1  # Add 1 second buffer
+                logger.warning(f"Flood control hit. Waiting {wait_time} seconds before retry (attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(wait_time)
+                continue
+
+            except TelegramError as e:
+                logger.error(f"Failed to send Telegram notification (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    # Wait before retry
+                    await asyncio.sleep(2)
+                    continue
+                else:
+                    return False
+
+        return False
 
     async def send_status_message(self, message: str) -> bool:
         """

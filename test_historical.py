@@ -174,8 +174,8 @@ async def test_2025_audit_reports():
                     failed_count += 1
                     logger.warning(f"❌ Failed to send ({failed_count} failed)")
 
-                # Rate limiting: wait 0.1 seconds between messages (max 10/sec, well below 30/sec limit)
-                await asyncio.sleep(0.1)
+                # Rate limiting: wait 2 seconds between messages to avoid Telegram flood control
+                await asyncio.sleep(2.0)
 
                 # Progress update every 50 messages
                 if i % 50 == 0:
