@@ -9,6 +9,9 @@ import {
   BASIC_DEDUCTION_PER_PERSON,
   ADDITIONAL_DEDUCTIONS,
   MEDICAL_EXPENSE,
+  CHILD_TAX_CREDIT_2025,
+  ADDITIONAL_CHILD_CREDIT,
+  EARNED_INCOME_TAX_CREDIT,
 } from './taxConstants';
 
 /**
@@ -88,7 +91,43 @@ export function calculateIncomeTax(과세표준: number): number {
 }
 
 /**
- * 함수 5: 전체 세액 계산 (Phase 2 버전 - 세액공제 제외)
+ * Phase 3: 자녀세액공제 계산 (2025년 개정)
+ */
+export function calculateChildTaxCredit(자녀수: number): number {
+  if (자녀수 === 0) return 0;
+
+  if (자녀수 <= 3) {
+    const found = CHILD_TAX_CREDIT_2025.find(item => item.children === 자녀수);
+    return found ? found.credit : 0;
+  }
+
+  // 3명 초과: 95만원 + (자녀수 - 3) * 40만원
+  const 기본3명공제 = CHILD_TAX_CREDIT_2025[2].credit; // 95만원
+  const 추가자녀수 = 자녀수 - 3;
+  return 기본3명공제 + (추가자녀수 * ADDITIONAL_CHILD_CREDIT);
+}
+
+/**
+ * Phase 3: 근로소득세액공제 계산
+ * - 산출세액 130만원 이하: 산출세액의 55% (최대 71.5만원)
+ * - 산출세액 130만원 초과: 71.5만원 + (130만원 초과분 × 30%)
+ * - 최대 66만원 한도
+ */
+export function calculateEarnedIncomeTaxCredit(산출세액: number): number {
+  if (산출세액 <= EARNED_INCOME_TAX_CREDIT.limit130) {
+    // 130만원 이하
+    const credit = 산출세액 * EARNED_INCOME_TAX_CREDIT.rate55;
+    return Math.floor(Math.min(credit, EARNED_INCOME_TAX_CREDIT.limit130_credit));
+  } else {
+    // 130만원 초과
+    const 초과분 = 산출세액 - EARNED_INCOME_TAX_CREDIT.limit130;
+    const credit = EARNED_INCOME_TAX_CREDIT.over130_base + (초과분 * EARNED_INCOME_TAX_CREDIT.over130_rate);
+    return Math.floor(Math.min(credit, EARNED_INCOME_TAX_CREDIT.maxCredit));
+  }
+}
+
+/**
+ * 함수 5: 전체 세액 계산 (Phase 3 최종 버전)
  */
 export function calculateTax(formData: any) {
   // 1. 근로소득공제
@@ -120,6 +159,14 @@ export function calculateTax(formData: any) {
   // 5. 산출세액
   const 산출세액 = calculateIncomeTax(과세표준);
 
+  // 6. 세액공제 (Phase 3)
+  const 자녀세액공제 = calculateChildTaxCredit(formData.자녀수);
+  const 근로소득세액공제 = calculateEarnedIncomeTaxCredit(산출세액);
+  const 세액공제합계 = 자녀세액공제 + 근로소득세액공제;
+
+  // 7. 최종 결정세액
+  const 결정세액 = Math.max(0, 산출세액 - 세액공제합계);
+
   return {
     총급여: formData.총급여,
     근로소득공제,
@@ -133,10 +180,9 @@ export function calculateTax(formData: any) {
     소득공제합계,
     과세표준,
     산출세액,
-    // Phase 3에서 추가 예정
-    자녀세액공제: 0,
-    근로소득세액공제: 0,
-    세액공제합계: 0,
-    결정세액: 산출세액, // Phase 3에서 세액공제 적용 후 계산
+    자녀세액공제,
+    근로소득세액공제,
+    세액공제합계,
+    결정세액,
   };
 }

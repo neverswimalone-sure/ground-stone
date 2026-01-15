@@ -217,7 +217,6 @@ export default function Home() {
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-lg shadow-md">
                   <div className="text-sm opacity-90 mb-1">최종 결정세액</div>
                   <div className="text-3xl font-bold">{formatNumber(result.결정세액)}</div>
-                  <div className="text-xs opacity-75 mt-2">※ 세액공제는 Phase 3에서 적용</div>
                 </div>
               </div>
             )}

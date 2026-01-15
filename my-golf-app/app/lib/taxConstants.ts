@@ -44,3 +44,23 @@ export const MEDICAL_EXPENSE = {
   한도: 7000000,              // 700만원 한도 (일반 의료비)
   노인장애인한도: Infinity,   // 65세 이상, 장애인은 한도 없음
 };
+
+// 2025년 자녀세액공제 (개정)
+export const CHILD_TAX_CREDIT_2025 = [
+  { children: 1, credit: 250000 },  // 1명: 25만원
+  { children: 2, credit: 550000 },  // 2명: 55만원 (25 + 30)
+  { children: 3, credit: 950000 },  // 3명: 95만원 (25 + 30 + 40)
+];
+
+// 3명 초과 시 추가 자녀 1명당
+export const ADDITIONAL_CHILD_CREDIT = 400000; // 40만원
+
+// 근로소득세액공제
+export const EARNED_INCOME_TAX_CREDIT = {
+  limit130: 1300000,   // 130만원 이하: 55% 공제
+  rate55: 0.55,
+  limit130_credit: 715000, // 130만원 이하 시 공제 한도: 71.5만원
+  over130_base: 715000,    // 130만원 초과 시 기본: 71.5만원
+  over130_rate: 0.30,      // 130만원 초과분의 30%
+  maxCredit: 660000,       // 최대 공제액: 66만원
+};
